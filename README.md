@@ -1,3 +1,4 @@
+[Notebook quicklink](https://github.com/my-Iq-is-3/beta-fold/blob/main/proj/beta-fold.ipynb)
 # beta-fold
 Entry for stanford-rna-3d-folding Kaggle competition (https://www.kaggle.com/competitions/stanford-rna-3d-folding)
 
