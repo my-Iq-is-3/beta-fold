@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200">
+  <!-- Background -->
+  <rect width="900" height="1200" fill="#f8f9fa" />
+  
+  <!-- Title -->
+  <text x="450" y="40" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">RibonanzaNet 3D Finetuned Architecture</text>
+  <text x="450" y="70" font-family="Arial" font-size="16" text-anchor="middle">(With Detailed Pairwise Operations Flow)</text>
+  
+  <!-- Input -->
+  <rect x="300" y="100" width="300" height="50" rx="10" fill="#e3f2fd" stroke="#2196f3" stroke-width="2"/>
+  <text x="450" y="132" font-family="Arial" font-size="16" text-anchor="middle">RNA Sequence (B, L)</text>
+  
+  <!-- Embedding Layer -->
+  <rect x="300" y="180" width="300" height="50" rx="10" fill="#e8f5e9" stroke="#4caf50" stroke-width="2"/>
+  <text x="450" y="205" font-family="Arial" font-size="16" text-anchor="middle">Embedding Layer</text>
+  <text x="450" y="225" font-family="Arial" font-size="14" text-anchor="middle">Output: (B, L, 256)</text>
+  
+  <!-- Split paths for sequence and pairwise -->
+  <!-- Sequence Path - Left side -->
+  <rect x="150" y="260" width="240" height="60" rx="10" fill="#e3f2fd" stroke="#2196f3" stroke-width="2"/>
+  <text x="270" y="290" font-family="Arial" font-size="16" text-anchor="middle">Sequence Features</text>
+  <text x="270" y="310" font-family="Arial" font-size="14" text-anchor="middle">(B, L, 256)</text>
+  
+  <!-- Pairwise Path - Right side - Outer Product Mean -->
+  <rect x="510" y="260" width="240" height="60" rx="10" fill="#fff3e0" stroke="#ff9800" stroke-width="2"/>
+  <text x="630" y="285" font-family="Arial" font-size="16" text-anchor="middle">Outer Product Mean</text>
+  <text x="630" y="305" font-family="Arial" font-size="14" text-anchor="middle">Output: (B, L, L, 32)</text>
+
+  <!-- Position Encoding -->
+  <rect x="600" y="350" width="200" height="40" rx="5" fill="#ede7f6" stroke="#673ab7" stroke-width="2"/>
+  <text x="700" y="375" font-family="Arial" font-size="14" text-anchor="middle">Relative Position Encoding</text>
+  
+  <!-- Add operation -->
+  <circle cx="630" cy="400" r="15" fill="#f5f5f5" stroke="#616161" stroke-width="2"/>
+  <text x="630" y="405" font-family="Arial" font-size="20" text-anchor="middle">+</text>
+  
+  <!-- Transformer Encoder Layers Box -->
+  <rect x="100" y="440" width="700" height="600" rx="10" fill="#fafafa" stroke="#616161" stroke-width="2" stroke-dasharray="5,5"/>
+  <text x="450" y="465" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">6x ConvTransformerEncoderLayer</text>
+  
+  <!-- Sequence Path in Transformer - Left Column -->
+  <rect x="150" y="500" width="240" height="60" rx="5" fill="#e0f7fa" stroke="#00bcd4" stroke-width="2"/>
+  <text x="270" y="525" font-family="Arial" font-size="16" text-anchor="middle">1D Conv</text>
+  <text x="270" y="545" font-family="Arial" font-size="14" text-anchor="middle">(B, L, 256) → (B, L, 256)</text>
+  
+  <rect x="150" y="600" width="240" height="70" rx="5" fill="#e1f5fe" stroke="#03a9f4" stroke-width="2"/>
+  <text x="270" y="625" font-family="Arial" font-size="16" text-anchor="middle">Multi-Head Attention</text>
+  <text x="270" y="645" font-family="Arial" font-size="14" text-anchor="middle">8 Heads, 32 dim/head</text>
+  <text x="270" y="665" font-family="Arial" font-size="12" text-anchor="middle">Uses pairwise features as attention bias</text>
+  
+  <rect x="150" y="710" width="240" height="60" rx="5" fill="#e8eaf6" stroke="#3f51b5" stroke-width="2"/>
+  <text x="270" y="735" font-family="Arial" font-size="16" text-anchor="middle">Feed Forward</text>
+  <text x="270" y="755" font-family="Arial" font-size="14" text-anchor="middle">(256) → (1024) → (256)</text>
+    
+  <!-- Sequence Features Output -->
+  <rect x="150" y="810" width="240" height="50" rx="5" fill="#e8eaf6" stroke="#3f51b5" stroke-width="2"/>
+  <text x="270" y="835" font-family="Arial" font-size="16" text-anchor="middle">Updated Sequence Features</text>
+  <text x="270" y="855" font-family="Arial" font-size="12" text-anchor="middle">(B, L, 256)</text>
+  
+  <!-- Output of OPM from sequence -->
+  <rect x="150" y="900" width="240" height="60" rx="5" fill="#fff3e0" stroke="#ff9800" stroke-width="2"/>
+  <text x="270" y="925" font-family="Arial" font-size="16" text-anchor="middle">Outer Product Mean</text>
+  <text x="270" y="945" font-family="Arial" font-size="14" text-anchor="middle">(B, L, 256) → (B, L, L, 32)</text>
+  
+  <!-- Pairwise Path in Transformer - Right Column -->
+  <rect x="510" y="500" width="240" height="60" rx="5" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+  <text x="630" y="525" font-family="Arial" font-size="16" text-anchor="middle">Pairwise Features</text>
+  <text x="630" y="545" font-family="Arial" font-size="14" text-anchor="middle">(B, L, L, 32)</text>
+  
+  <rect x="510" y="600" width="240" height="60" rx="5" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+  <text x="630" y="625" font-family="Arial" font-size="16" text-anchor="middle">Triangle Update (Outgoing)</text>
+  <text x="630" y="645" font-family="Arial" font-size="14" text-anchor="middle">(B, L, L, 32) → (B, L, L, 32)</text>
+  
+  <rect x="510" y="700" width="240" height="60" rx="5" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+  <text x="630" y="725" font-family="Arial" font-size="16" text-anchor="middle">Triangle Update (Incoming)</text>
+  <text x="630" y="745" font-family="Arial" font-size="14" text-anchor="middle">(B, L, L, 32) → (B, L, L, 32)</text>
+  
+  <rect x="510" y="800" width="240" height="60" rx="5" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+  <text x="630" y="825" font-family="Arial" font-size="16" text-anchor="middle">Triangle Attention (Optional)</text>
+  <text x="630" y="845" font-family="Arial" font-size="14" text-anchor="middle">(B, L, L, 32) → (B, L, L, 32)</text>
+  
+  <rect x="510" y="900" width="240" height="60" rx="5" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+  <text x="630" y="925" font-family="Arial" font-size="16" text-anchor="middle">Pair Transition</text>
+  <text x="630" y="945" font-family="Arial" font-size="14" text-anchor="middle">(B, L, L, 32) → (B, L, L, 32)</text>
+  
+  <!-- Add circle for OPM contribution -->
+  <circle cx="430" y="930" r="15" fill="#f5f5f5" stroke="#616161" stroke-width="2"/>
+  <text x="430" y="935" font-family="Arial" font-size="20" text-anchor="middle">+</text>
+  
+  <!-- Add circle for updated pairwise -->
+  <rect x="510" y="990" width="240" height="50" rx="5" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+  <text x="630" y="1015" font-family="Arial" font-size="16" text-anchor="middle">Updated Pairwise Features</text>
+  <text x="630" y="1035" font-family="Arial" font-size="12" text-anchor="middle">(B, L, L, 32)</text>
+  
+  <!-- Final Output after Transformer Layers -->
+  <rect x="150" y="1080" width="240" height="60" rx="10" fill="#e8eaf6" stroke="#3f51b5" stroke-width="2"/>
+  <text x="270" y="1110" font-family="Arial" font-size="16" text-anchor="middle">Final Sequence Features</text>
+  <text x="270" y="1130" font-family="Arial" font-size="14" text-anchor="middle">(B, L, 256)</text>
+  
+  <!-- Final Linear Layer -->
+  <rect x="150" y="1170" width="240" height="50" rx="10" fill="#ffebee" stroke="#f44336" stroke-width="2"/>
+  <text x="270" y="1195" font-family="Arial" font-size="16" text-anchor="middle">XYZ Predictor (Linear 256→3)</text>
+  <text x="270" y="1215" font-family="Arial" font-size="12" text-anchor="middle">(B, L, 3)</text>
+  
+  <!-- Legend -->
+  <rect x="510" y="1080" width="240" height="140" rx="5" fill="#f5f5f5" stroke="#616161" stroke-width="2"/>
+  <text x="630" y="1105" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Legend</text>
+  
+  <rect x="530" y="1120" width="15" height="15" fill="#e3f2fd" stroke="#2196f3" stroke-width="2"/>
+  <text x="555" y="1133" font-family="Arial" font-size="12" text-anchor="start">Sequence Processing</text>
+  
+  <rect x="530" y="1145" width="15" height="15" fill="#fce4ec" stroke="#e91e63" stroke-width="2"/>
+  <text x="555" y="1158" font-family="Arial" font-size="12" text-anchor="start">Pairwise Operations</text>
+  
+  <rect x="530" y="1170" width="15" height="15" fill="#fff3e0" stroke="#ff9800" stroke-width="2"/>
+  <text x="555" y="1183" font-family="Arial" font-size="12" text-anchor="start">Sequence→Pairwise Conversion</text>
+  
+  <rect x="530" y="1195" width="15" height="15" fill="#e1f5fe" stroke="#03a9f4" stroke-width="2"/>
+  <text x="555" y="1208" font-family="Arial" font-size="12" text-anchor="start">Attention Mechanism</text>
+  
+  <!-- Arrowhead definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#000"/>
+    </marker>
+    <marker id="bluearrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#2196f3"/>
+    </marker>
+    <marker id="redarrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e91e63"/>
+    </marker>
+    <marker id="orangearrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#ff9800"/>
+    </marker>
+    <marker id="purplearrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#673ab7"/>
+    </marker>
+  </defs>
+  
+  <!-- Connector arrows - Sequence Flow (Blue) -->
+  <path d="M450 150 L450 180" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  <path d="M390 230 L270 260" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  <path d="M270 320 L270 500" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  <path d="M270 560 L270 600" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  <path d="M270 670 L270 710" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  <path d="M270 770 L270 810" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  <path d="M270 860 L270 900" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  
+  <!-- Final Sequence Output (from Transformer Box to Final) -->
+  <path d="M270 960 L270 1080" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  <path d="M270 1140 L270 1170" stroke="#2196f3" stroke-width="2" fill="none" marker-end="url(#bluearrow)"/>
+  
+  <!-- Pairwise Flow (Red) -->
+  <path d="M450 230 L510 260" stroke="#ff9800" stroke-width="2" fill="none" marker-end="url(#orangearrow)"/>
+  <path d="M630 320 L630 350" stroke="#673ab7" stroke-width="2" fill="none" marker-end="url(#purplearrow)"/>
+  <path d="M700 390 L645 400" stroke="#673ab7" stroke-width="2" fill="none" marker-end="url(#purplearrow)"/>
+  <path d="M630 415 L630 500" stroke="#e91e63" stroke-width="2" fill="none" marker-end="url(#redarrow)"/>
+  <path d="M630 560 L630 600" stroke="#e91e63" stroke-width="2" fill="none" marker-end="url(#redarrow)"/>
+  <path d="M630 660 L630 700" stroke="#e91e63" stroke-width="2" fill="none" marker-end="url(#redarrow)"/>
+  <path d="M630 760 L630 800" stroke="#e91e63" stroke-width="2" fill="none" marker-end="url(#redarrow)"/>
+  <path d="M630 860 L630 900" stroke="#e91e63" stroke-width="2" fill="none" marker-end="url(#redarrow)"/>
+  <path d="M630 960 L630 990" stroke="#e91e63" stroke-width="2" fill="none" marker-end="url(#redarrow)"/>
+  
+  <!-- Cross-connections between Sequence and Pairwise -->
+  <!-- From Sequence to Pairwise (OPM) -->
+  <path d="M390 930 L415 930" stroke="#ff9800" stroke-width="2" fill="none" marker-end="url(#orangearrow)"/>
+  <path d="M445 930 L510 930" stroke="#ff9800" stroke-width="2" fill="none" marker-end="url(#orangearrow)"/>
+  
+  <!-- From Pairwise to Attention (as bias) -->
+  <path d="M510 530 L400 630" stroke="#e91e63" stroke-width="2" fill="none" marker-end="url(#redarrow)"/>
+  <text x="420" y="570" font-family="Arial" font-size="12" text-anchor="middle" fill="#e91e63">Used as</text>
+  <text x="420" y="585" font-family="Arial" font-size="12" text-anchor="middle" fill="#e91e63">attention bias</text>
+  
+  <!-- Repeated Layer Note -->
+  <text x="500" y="1045" font-family="Arial" font-size="14" text-anchor="middle" font-style="italic">Note: These operations repeat in each of the 6 transformer layers</text>
+</svg>
