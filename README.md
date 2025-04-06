@@ -5,9 +5,10 @@ Entry for stanford-rna-3d-folding Kaggle competition (https://www.kaggle.com/com
 # TODO
 1. Implement synth RNA structures
 2. Test squeezeformer
-3. Test BPPM
+3. Test BPPM (ehhh maybe?)
 4. Research and brainstorm
-5. Think about n-gon custom updates/attention (similar to triangle updates but with more (n) attending nodes)
+5. Test structure normalization -> rescaling networks 
+6. Think about n-gon custom updates/attention (similar to triangle updates but with more (n) attending nodes)
 
 # Reference Links
 1. Synthetic RNA structures: https://www.kaggle.com/datasets/andrewfavor/uw-synthetic-rna-structures/data
