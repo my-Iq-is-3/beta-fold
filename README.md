@@ -4,6 +4,10 @@ Entry for stanford-rna-3d-folding Kaggle competition (https://www.kaggle.com/com
 # MODEL ARCHITECTURE
 ![RibonanzaNet 3D Architecture](images/ribonanzanet-architecture.svg)
 
+# TODO
+1. Test squeezeformer
+2. 
+
 # Reference Links
 1. Synthetic RNA structures: https://www.kaggle.com/datasets/andrewfavor/uw-synthetic-rna-structures/data
 2. Base model we are building off of: https://github.com/Shujun-He/RibonanzaNet
