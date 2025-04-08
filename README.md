@@ -15,6 +15,7 @@ Entry for stanford-rna-3d-folding Kaggle competition (https://www.kaggle.com/com
 2. Base model we are building off of: https://github.com/Shujun-He/RibonanzaNet
 3. Base model presentation: https://www.youtube.com/watch?v=u6msaNZyfSk
 4. Secondary model presentation (to integrate improvements from): https://www.youtube.com/watch?v=n4zz9nY4uGU
+5. [Whiteboard]( https://wbd.ms/share/v2/aHR0cHM6Ly93aGl0ZWJvYXJkLm1pY3Jvc29mdC5jb20vYXBpL3YxLjAvd2hpdGVib2FyZHMvcmVkZWVtL2FjY2EwYmI4Y2M0MjQ3YWJhNDY5Zjk0MDBmZTljYjZkX0JCQTcxNzYyLTEyRTAtNDJFMS1CMzI0LTVCMTMxRjQyNEUzRF9lZTJkNGViNC0wODE4LTQ4ZTktODAyMS1mYzQ2MzJkOGVkZjg=)
 
 # MODEL ARCHITECTURE
 ![RibonanzaNet 3D Architecture](images/ribonanzanet-architecture.svg)
