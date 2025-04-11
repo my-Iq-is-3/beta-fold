@@ -38,24 +38,22 @@ def load_ccd_dict(ccd_path):
     return mapping
 
 
-def iterate_pdb_file(lines, pdb_id, ccd_dict, rna3db_chain_id=None,verbose=False):
+def iterate_pdb_file(lines, pdb_id, ccd_dict, rna3db_chain_id=None, verbose=False):
     """
-    Extracts C1' atoms from a PDB file, optionally filtering by chain ID.
-    Converts modified residues to canonical RNA bases (A, U, G, C) in val_seq.
-    Skips malformed lines safely and logs them if verbose=True.
+    Extracts C1' atoms from a PDB file, preserving all conformations (altLocs).
+    Converts modified residues to canonical RNA bases (A, U, G, C) in val_seq per conformation.
 
     :param lines: Iterable of lines from the PDB file.
     :param pdb_id: The PDB ID (e.g. '6t7t').
     :param ccd_dict: Dictionary mapping modified residues to canonical (1-letter) forms.
     :param rna3db_chain_id: Optional full chain ID from RNA3DB (e.g. '6t7t_C2').
     :param verbose: Print skipped lines and reasons if True.
-    :return: DataFrame of atom data and canonical sequence string.
+    :return: Dictionary of {altLoc: (DataFrame, val_seq)} per conformation
     """
-    data = []
-    nucleotide_index = 1
-    val_seq = ''
-
-    res_to_base = load_ccd_dict('../RNA3DB/components.cif')
+    from collections import defaultdict
+    data = defaultdict(list)
+    val_seq = defaultdict(str)
+    nucleotide_index = defaultdict(int)
 
     pdb_chain_id = rna3db_chain_id.split('_')[-1][0] if rna3db_chain_id else None
 
@@ -63,11 +61,12 @@ def iterate_pdb_file(lines, pdb_id, ccd_dict, rna3db_chain_id=None,verbose=False
         if not (line.startswith("ATOM") or line.startswith("HETATM")):
             continue
 
-        if len(line) < 54:  # Ensure line has enough columns for coordinates
+        if len(line) < 54:
             if verbose:
                 print(f"[SKIPPED] Line too short: {repr(line)}")
             continue
 
+        altloc = line[16].strip() or '_'  # Use '_' for empty altLocs
         atom_name = line[12:16].strip()
         if atom_name != "C1'":
             continue
@@ -77,14 +76,13 @@ def iterate_pdb_file(lines, pdb_id, ccd_dict, rna3db_chain_id=None,verbose=False
             continue
 
         try:
-            resname = line[17:20].strip()
-            if resname not in ['G', 'A', 'C', 'U']:  # It's a modified residue
-                try:
-                    resname = ccd_dict[resname]
-                except KeyError:
-                    if verbose:
-                        print(f'Unknown modified residue: {resname} unable to parse. Continue with next sequence')
-                    continue
+            raw_resname = line[17:20].strip()
+            if raw_resname in ['A', 'U', 'G', 'C']:
+                resname = raw_resname
+            else:
+                resname = ccd_dict.get(raw_resname, 'N')
+                if resname == 'N' and verbose:
+                    print(f"Unknown modified residue: {raw_resname}, continuing.")
 
             resid = int(line[22:26].strip())
             x = float(line[30:38].strip())
@@ -92,16 +90,24 @@ def iterate_pdb_file(lines, pdb_id, ccd_dict, rna3db_chain_id=None,verbose=False
             z = float(line[46:54].strip())
         except ValueError as e:
             if verbose:
-                print(f"[SKIPPED] Failed to parse values in line: {repr(line)} — {e}")
+                print(f"[SKIPPED] Failed to parse line: {repr(line)} — {e}")
             continue
 
-        id_ = f"{pdb_id}_{nucleotide_index}"
-        data.append([id_, resname, nucleotide_index, x, y, z])
-        val_seq += resname
-        nucleotide_index += 1
+        # Increment per-conformation nucleotide index
+        nucleotide_index[altloc] += 1
+        index = nucleotide_index[altloc]
 
-    columns = ['ID', 'resname', 'resid', 'x_1', 'y_1', 'z_1']
-    return pd.DataFrame(data, columns=columns), val_seq
+        id_ = f"{pdb_id}_{altloc}_{index}"
+        data[altloc].append([id_, resname, index, altloc, x, y, z])
+        val_seq[altloc] += resname
+
+    # Build output
+    result = {}
+    for altloc in data:
+        df = pd.DataFrame(data[altloc], columns=['ID', 'altloc', 'resname', 'resid', 'x_1', 'y_1', 'z_1'])
+        result[altloc] = (df, val_seq[altloc])
+
+    return result
 
 
 def read_pbd_file(file_path, pdb_id):

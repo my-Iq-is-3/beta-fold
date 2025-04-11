@@ -14,7 +14,7 @@ def process_rna3db(file_path):
     train_set = data['train_set']
     test_set = data['test_set']
 
-    cols = ['ID', 'resname', 'resid', 'x_1', 'y_1', 'z_1', 'resolution', 'release_date', 'seq_length']
+    cols = ['ID', 'altloc', 'resname', 'resid', 'x_1', 'y_1', 'z_1', 'resolution', 'release_date', 'seq_length']
     df_train = pd.DataFrame(columns=cols)
     df_test = pd.DataFrame(columns=cols)
 
@@ -37,22 +37,33 @@ def process_rna3db(file_path):
                 lines = fetch_pdb(pdb_id)
                 if lines is None:
                     continue
-                df, val_seq = iterate_pdb_file(lines=lines, pdb_id=pdb_id, rna3db_chain_id=chain_id, ccd_dict=ccd_d)
 
-                # Validate the correctness of the sequence and length extracted from the pdb file
-                if val_seq != entry['sequence']:
-                    print(f"Skipping Sequence due to sequence mismatch for {pdb_id}_{chain_id}: {val_seq} != {entry['sequence']}")
+                res_dict = iterate_pdb_file(lines=lines, pdb_id=pdb_id, rna3db_chain_id=chain_id, ccd_dict=ccd_d)
+                df_confs = pd.DataFrame(columns=['ID', 'resname', 'resid', 'altloc', 'x_1', 'y_1', 'z_1'])
+
+                # Validate for all conformations from the pdb file if they match the expected sequence
+                val_ct = 0
+                for conf in res_dict:
+                    df, val_seq = res_dict[conf]
+                    if val_seq == entry['sequence']:
+                        if not df.empty:
+                            df_confs = pd.concat([df_confs, df], ignore_index=True)
+                        val_ct += 1
+                    else:
+                        print(f'DEBUG: Mismatch for {pdb_id}_{chain_id}; CONF: {conf}: {val_seq} != {entry["sequence"]}')
+                        print(f'DEBUG: Sequence lengths for {pdb_id}_{chain_id}; CONF: {conf}: {len(val_seq)} != {entry["length"]}')
+                if val_ct == 0:
+                    # print(f"Skipping Sequence due to sequence mismatch for {pdb_id}_{chain_id}: {val_ct}/{len(res_dict.keys())} found conformations match the expected sequence")
                     continue
-                # val_seq == entry['sequence'], f"Sequence mismatch for {pdb_id}_{chain_id}: {val_seq} != {entry['sequence']}"
-                # assert len(val_seq) == entry['length'], f"Length mismatch for {pdb_id}_{chain_id}: {len(val_seq)} != {entry['length']}"
 
                 # Add additional information to the DataFrame
-                df['resolution'] = entry['resolution']
-                df['release_date'] = entry['release_date']
-                df['seq_length'] = entry['length']
+                df_confs['resolution'] = entry['resolution']
+                df_confs['release_date'] = entry['release_date']
+                df_confs['seq_length'] = entry['length']
 
                 # Append the DataFrame to the total DataFrame
-                df_train = pd.concat([df_train, df], ignore_index=True)
+                if not df_confs.empty:
+                    df_train = pd.concat([df_train, df_confs], ignore_index=True)
 
     # Collect unique nucleotide sequences while looping
     test_unique_sequences_set = set()
