@@ -6,34 +6,102 @@ import requests
 from tqdm import tqdm
 
 
-def iterate_pdb_file(lines, pdb_id):
+def load_ccd_dict(ccd_path):
     """
-    Iterates through the lines of a PDB file and extracts relevant columns.
-    :param lines: Iterable of lines from the PDB file.
-    :param pdb_id: The PDB ID of the RNA structure.
-    :return: List of lists containing the extracted data.
+    As the sequences in the RNA3DB contains residue modifications such as pseudouridylations,
+    we use the chemical component dictionary (CCP) to map the modified residues
+    to their canonical forms (A, C, G, U).
+    :param ccd_path: Path to the CCD CIF file.
+    :return: Dictionary containing the mapping.
     """
-    data = []
-    nucleotide_index = 1  # To keep track of the index for the ID column
+    with open(ccd_path, 'r') as file:
+        lines = file.readlines()
+
+    mapping = {}
+    current_id = None
+    in_chem_comp_block = False
 
     for line in lines:
-        if line.startswith("ATOM") and "C1'" in line[12:16].strip():
-            # Extract relevant fields from the line
+        line = line.strip()
+
+        if line.startswith("_chem_comp.id"):
+            current_id = line.split()[-1]
+            in_chem_comp_block = True
+
+        elif line.startswith("_chem_comp.mon_nstd_parent_comp_id") and in_chem_comp_block and current_id:
+            one_letter = line.split()[-1].strip('"')
+            if one_letter != '?' and len(one_letter) == 1:
+                mapping[current_id] = one_letter
+            current_id = None
+            in_chem_comp_block = False
+
+    return mapping
+
+
+def iterate_pdb_file(lines, pdb_id, ccd_dict, rna3db_chain_id=None,verbose=False):
+    """
+    Extracts C1' atoms from a PDB file, optionally filtering by chain ID.
+    Converts modified residues to canonical RNA bases (A, U, G, C) in val_seq.
+    Skips malformed lines safely and logs them if verbose=True.
+
+    :param lines: Iterable of lines from the PDB file.
+    :param pdb_id: The PDB ID (e.g. '6t7t').
+    :param ccd_dict: Dictionary mapping modified residues to canonical (1-letter) forms.
+    :param rna3db_chain_id: Optional full chain ID from RNA3DB (e.g. '6t7t_C2').
+    :param verbose: Print skipped lines and reasons if True.
+    :return: DataFrame of atom data and canonical sequence string.
+    """
+    data = []
+    nucleotide_index = 1
+    val_seq = ''
+
+    res_to_base = load_ccd_dict('../RNA3DB/components.cif')
+
+    pdb_chain_id = rna3db_chain_id.split('_')[-1][0] if rna3db_chain_id else None
+
+    for line in lines:
+        if not (line.startswith("ATOM") or line.startswith("HETATM")):
+            continue
+
+        if len(line) < 54:  # Ensure line has enough columns for coordinates
+            if verbose:
+                print(f"[SKIPPED] Line too short: {repr(line)}")
+            continue
+
+        atom_name = line[12:16].strip()
+        if atom_name != "C1'":
+            continue
+
+        line_chain_id = line[21].strip()
+        if pdb_chain_id and line_chain_id != pdb_chain_id:
+            continue
+
+        try:
             resname = line[17:20].strip()
+            if resname not in ['G', 'A', 'C', 'U']:  # It's a modified residue
+                try:
+                    resname = ccd_dict[resname]
+                except KeyError:
+                    if verbose:
+                        print(f'Unknown modified residue: {resname} unable to parse. Continue with next sequence')
+                    continue
+
             resid = int(line[22:26].strip())
             x = float(line[30:38].strip())
             y = float(line[38:46].strip())
             z = float(line[46:54].strip())
+        except ValueError as e:
+            if verbose:
+                print(f"[SKIPPED] Failed to parse values in line: {repr(line)} — {e}")
+            continue
 
-            # Create the ID
-            id_ = f"{pdb_id}_{nucleotide_index}"
-
-            # Append the data to the list
-            data.append([id_, resname, nucleotide_index, x, y, z])
-            nucleotide_index += 1
+        id_ = f"{pdb_id}_{nucleotide_index}"
+        data.append([id_, resname, nucleotide_index, x, y, z])
+        val_seq += resname
+        nucleotide_index += 1
 
     columns = ['ID', 'resname', 'resid', 'x_1', 'y_1', 'z_1']
-    return pd.DataFrame(data, columns=columns)
+    return pd.DataFrame(data, columns=columns), val_seq
 
 
 def read_pbd_file(file_path, pdb_id):
@@ -101,6 +169,17 @@ def load_files_to_dataframe(directory, max_size_mb):
 
     print(f"Total loaded size: {total_size / (1024 * 1024):.2f} MB")
     return combined_df
+
+
+def fetch_pdb(pdb_id):
+    detailed_url = f'https://files.rcsb.org/view/{pdb_id}.pdb'
+    response = requests.get(detailed_url)
+    if response.status_code == 200:
+        return response.text.splitlines()
+    else:
+        print(f"Error fetching PDB file for {pdb_id}: {response.status_code}. Skipping.")
+        return None
+
 
 
 def search_rna_structures(save_path):
@@ -253,5 +332,5 @@ def search_rna_structures(save_path):
 #     print("No data was loaded.")
 
 # Search for RNA structures and save to CSV
-search_rna_structures('../Scraping/rcsb_structures.csv')
+# search_rna_structures('../Scraping/rcsb_structures.csv')
 
