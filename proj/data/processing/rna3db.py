@@ -45,16 +45,15 @@ def process_rna3db(file_path):
                 val_ct = 0
                 for conf in res_dict:
                     df, val_seq = res_dict[conf]
-                    if val_seq == entry['sequence']:
-                        if not df.empty:
-                            df_confs = pd.concat([df_confs, df], ignore_index=True)
-                        val_ct += 1
-                    else:
-                        print(f'DEBUG: Mismatch for {pdb_id}_{chain_id}; CONF: {conf}: {val_seq} != {entry["sequence"]}')
-                        print(f'DEBUG: Sequence lengths for {pdb_id}_{chain_id}; CONF: {conf}: {len(val_seq)} != {entry["length"]}')
-                if val_ct == 0:
-                    # print(f"Skipping Sequence due to sequence mismatch for {pdb_id}_{chain_id}: {val_ct}/{len(res_dict.keys())} found conformations match the expected sequence")
-                    continue
+                    df_confs = pd.concat([df_confs, df], ignore_index=True)
+                    # if val_seq == entry['sequence']:
+                    #     if not df.empty:
+                    #         df_confs = pd.concat([df_confs, df], ignore_index=True)
+                    #         val_ct += 1
+
+                # if val_ct == 0:
+                #      print(f"Skipping Sequence due to sequence mismatch for {pdb_id}_{chain_id}: {val_ct}/{len(res_dict.keys())} found conformations match the expected sequence")
+                #     continue
 
                 # Add additional information to the DataFrame
                 df_confs['resolution'] = entry['resolution']
