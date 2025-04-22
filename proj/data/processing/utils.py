@@ -50,15 +50,19 @@ def iterate_pdb_file(lines, entity_id, ccd_dict, verbose=False):
     """
     from collections import defaultdict
     data = defaultdict(list)
-    val_seq = defaultdict(str)
+    val_seq = defaultdict(list)
     nucleotide_index = defaultdict(int)
 
     # Extract pdb_id and entity id
-    pdb_id = entity_id.split('_')[0]
-    target_chain_id = entity_id.split('_')[1] if '_' in entity_id else None
+    parts = entity_id.split('_')
+    pdb_id, target_chain_id = parts[0], parts[1] if len(parts) > 1 else None
+
+    # Local variable optimization
+    float_ = float
+    startswith = str.startswith
 
     for line in lines:
-        if not (line.startswith("ATOM") or line.startswith("HETATM")):
+        if not (startswith(line, "ATOM") or startswith(line, "HETATM")):
             continue
 
         if len(line) < 54:
@@ -81,12 +85,13 @@ def iterate_pdb_file(lines, entity_id, ccd_dict, verbose=False):
                 resname = raw_resname
             else:
                 resname = ccd_dict.get(raw_resname, 'N')
-                if resname == 'N' and verbose:
+                if verbose and resname == 'N':
                     print(f"Unknown modified residue: {raw_resname}, continuing.")
 
-            x = float(line[30:38].strip())
-            y = float(line[38:46].strip())
-            z = float(line[46:54].strip())
+            x = float_(line[30:38])
+            y = float_(line[38:46])
+            z = float_(line[46:54])
+
         except ValueError as e:
             if verbose:
                 print(f"[SKIPPED] Failed to parse line: {repr(line)} — {e}")
@@ -98,18 +103,19 @@ def iterate_pdb_file(lines, entity_id, ccd_dict, verbose=False):
 
         id_ = f"{pdb_id}_{altloc}_{index}"
         data[altloc].append([id_, altloc, resname, index, x, y, z])
-        val_seq[altloc] += resname
+        val_seq[altloc].append(resname)
 
     # Build output
     result = {}
     for altloc in data:
         df = pd.DataFrame(data[altloc], columns=['ID', 'altloc', 'resname', 'resid', 'x_1', 'y_1', 'z_1'])
-        result[altloc] = (df, val_seq[altloc])
+        val_seq = ''.join(val_seq[altloc])
+        result[altloc] = (df, val_seq)
 
     return result
 
 
-def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
+def iterate_cif_file(lines, entity_id, ccd_dict, verbose=True):
     """
     Extracts C1' atoms from a mmCIF file, preserving all conformations (altLocs).
     Converts modified residues to canonical RNA bases (A, U, G, C) in val_seq per conformation.
@@ -124,30 +130,33 @@ def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
     from collections import defaultdict
 
     data = defaultdict(list)
-    val_seq = defaultdict(str)
+    val_seq = defaultdict(list)
     nucleotide_index = defaultdict(int)
 
     # Extract pdb_id and entity id
-    pdb_id = entity_id.split('_')[0]
-    target_chain_id = entity_id.split('_')[1] if '_' in entity_id else None
+    parts = entity_id.split('_')
+    pdb_id, target_chain_id = parts[0], parts[1] if len(parts) > 1 else None
 
     atom_site_started = False
     atom_site_headers = []
     atom_site_data = []
+    inside_atom_site_block = False
 
     for line in lines:
         if line.startswith("loop_"):
-            atom_site_started = False
-            atom_site_headers = []
+            if inside_atom_site_block:
+                # Stop parsing once _atom_site block is done
+                break
             continue
 
         if line.startswith("_atom_site."):
             atom_site_headers.append(line.strip())
             if "_atom_site.Cartn_x" in line:
                 atom_site_started = True
+                inside_atom_site_block = True
             continue
 
-        if atom_site_started and len(atom_site_headers) > 0 and not line.startswith("_"):
+        if atom_site_started and not line.startswith("_") and line.strip():
             atom_site_data.append(line.strip().split())
 
     if not atom_site_headers or not atom_site_data:
@@ -158,9 +167,13 @@ def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
     header_keys = [h.split(".")[-1] for h in atom_site_headers]
     rows = [dict(zip(header_keys, row)) for row in atom_site_data if len(row) == len(header_keys)]
 
+    # Local variable optimization
+    float_ = float
+    get = dict.get
+
     for row in rows:
         try:
-            atom_name = row.get("label_atom_id", "").strip().replace('"', '')
+            atom_name = get(row, "label_atom_id", "").strip().replace('"', '')
             if atom_name != "C1'":
                 continue
 
@@ -177,12 +190,12 @@ def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
                 resname = raw_resname
             else:
                 resname = ccd_dict.get(raw_resname, 'N')
-                if resname == 'N' and verbose:
+                if verbose and resname == 'N':
                     print(f"Unknown modified residue: {raw_resname}, continuing.")
 
-            x = float(row.get("Cartn_x", "0").strip())
-            y = float(row.get("Cartn_y", "0").strip())
-            z = float(row.get("Cartn_z", "0").strip())
+            x = float_(get(row, "Cartn_x", "0"))
+            y = float_(get(row, "Cartn_y", "0"))
+            z = float_(get(row, "Cartn_z", "0"))
         except Exception as e:
             if verbose:
                 print(f"[SKIPPED] Failed to parse row: {row} — {e}")
@@ -192,12 +205,13 @@ def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
         index = nucleotide_index[altloc]
         id_ = f"{pdb_id}_{altloc}_{index}"
         data[altloc].append([id_, altloc, resname, index, x, y, z])
-        val_seq[altloc] += resname
+        val_seq[altloc].append(resname)
 
     result = {}
     for altloc in data:
         df = pd.DataFrame(data[altloc], columns=['ID', 'altloc', 'resname', 'resid', 'x_1', 'y_1', 'z_1'])
-        result[altloc] = (df, val_seq[altloc])
+        val_seq = ''.join(val_seq[altloc])
+        result[altloc] = (df, val_seq)
 
     return result
 
@@ -263,19 +277,16 @@ def load_files_to_dataframe(directory, max_size_mb):
 
 
 def fetch_file(rna_id):
-    """
-    Attempts to fetch the .pdb file first, then falls back to .cif if not found.
-
-    :param rna_id: The PDB ID (e.g., '7B7D')
-    :return: Tuple containing the extension of the extracted lines and the lines itself. None if unavailable.
-    """
     base_url = 'https://files.rcsb.org/view'
     for ext in ['cif', 'pdb']:
-    # for ext in ['pdb']:
         url = f'{base_url}/{rna_id}.{ext}'
-        response = requests.get(url)
-        if response.ok:
-            return ext, response.text.splitlines()
+        try:
+            response = requests.get(url, timeout=5)
+            if response.ok:
+                return ext, response.text.splitlines()
+        except requests.RequestException as e:
+            print(f"[WARN] Request failed for {url}: {e}")
+            continue
     print(f"Error: could not fetch .pdb or .cif for {rna_id}. Skipping File")
     return None, None
 

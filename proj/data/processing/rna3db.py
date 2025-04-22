@@ -1,5 +1,6 @@
 import json
 import warnings
+import time
 
 import pandas as pd
 from tqdm import tqdm
@@ -164,14 +165,16 @@ def process_rna3db(file_path):
         json.dump(error_logs, error_file, indent=4)
 
 
-process_rna3db('../RNA3DB/rna3db.json')
-'''
-id = '4x0b'
-chain_id = 'B'
+# process_rna3db('../RNA3DB/rna3db.json')
+
+id = '8why'
+chain_id = 'A'
 ext, lines = fetch_file(id)
 print(ext)
 ccd_dict = load_ccd_dict('../RNA3DB/components.cif')
-# results_dict = iterate_cif_file(lines=lines, entity_id=f'{id}_{chain_id}', ccd_dict=ccd_dict)
-results_dict = iterate_pdb_file(lines=lines, pdb_id=id, rna3db_chain_id=chain_id, ccd_dict=ccd_dict)
+start_time = time.time()
+results_dict = iterate_cif_file(lines=lines, entity_id=f'{id}_{chain_id}', ccd_dict=ccd_dict)
+stop_time = time.time()
+# results_dict = iterate_pdb_file(lines=lines, entity_id=id, ccd_dict=ccd_dict)
 print(results_dict)
-'''
+print(f'Time taken: {stop_time - start_time} seconds')
