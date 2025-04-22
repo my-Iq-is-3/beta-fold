@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import time
-import sys
 import requests
 from tqdm import tqdm
 
@@ -44,9 +43,8 @@ def iterate_pdb_file(lines, entity_id, ccd_dict, verbose=False):
     Converts modified residues to canonical RNA bases (A, U, G, C) in val_seq per conformation.
 
     :param lines: Iterable of lines from the PDB file.
-    :param pdb_id: The PDB ID (e.g. '6t7t').
+    :param entity_id: The ID of the RNA molecule and the chain identifier, seperated by "_" (e.g. '6t7t_2').
     :param ccd_dict: Dictionary mapping modified residues to canonical (1-letter) forms.
-    :param rna3db_chain_id: Optional full chain ID from RNA3DB (e.g. '6t7t_C2').
     :param verbose: Print skipped lines and reasons if True.
     :return: Dictionary of {altLoc: (DataFrame, val_seq)} per conformation
     """
@@ -86,7 +84,6 @@ def iterate_pdb_file(lines, entity_id, ccd_dict, verbose=False):
                 if resname == 'N' and verbose:
                     print(f"Unknown modified residue: {raw_resname}, continuing.")
 
-            resid = int(line[22:26].strip())
             x = float(line[30:38].strip())
             y = float(line[38:46].strip())
             z = float(line[46:54].strip())
@@ -118,7 +115,7 @@ def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
     Converts modified residues to canonical RNA bases (A, U, G, C) in val_seq per conformation.
 
     :param lines: Iterable of lines from the mmCIF file.
-    :param entity_id: Combined PDB ID and entity ID, e.g. '7b7d_2'
+    :param entity_id: The ID of the RNA molecule and the chain identifier, seperated by "_" (e.g. '6t7t_2').
     :param ccd_dict: Dictionary mapping modified residues to canonical (1-letter) forms.
     :param verbose: Print skipped lines and reasons if True.
     :return: Dictionary of {altLoc: (DataFrame, val_seq)} per conformation
@@ -183,7 +180,6 @@ def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
                 if resname == 'N' and verbose:
                     print(f"Unknown modified residue: {raw_resname}, continuing.")
 
-            resid = int(row.get("auth_seq_id", "0").strip())
             x = float(row.get("Cartn_x", "0").strip())
             y = float(row.get("Cartn_y", "0").strip())
             z = float(row.get("Cartn_z", "0").strip())
@@ -207,14 +203,7 @@ def iterate_cif_file(lines, entity_id, ccd_dict, verbose=False):
 
 
 def read_pbd_file(file_path, pdb_id):
-    """
-    Reads a .pbd file and returns relevant information as a DataFrame.
-    Only extracts rows corresponding to the 'C1' atom.
-    """
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-
-    return iterate_pdb_file(lines, pdb_id)
+    raise NotImplementedError("read_pbd_file function is not implemented.")
 
 
 def load_files_to_dataframe(directory, max_size_mb):
@@ -273,21 +262,21 @@ def load_files_to_dataframe(directory, max_size_mb):
     return combined_df
 
 
-def fetch_file(id):
+def fetch_file(rna_id):
     """
     Attempts to fetch the .pdb file first, then falls back to .cif if not found.
 
-    :param id: The PDB ID (e.g., '7B7D')
+    :param rna_id: The PDB ID (e.g., '7B7D')
     :return: Tuple containing the extension of the extracted lines and the lines itself. None if unavailable.
     """
     base_url = 'https://files.rcsb.org/view'
     for ext in ['cif', 'pdb']:
     # for ext in ['pdb']:
-        url = f'{base_url}/{id}.{ext}'
+        url = f'{base_url}/{rna_id}.{ext}'
         response = requests.get(url)
         if response.ok:
             return ext, response.text.splitlines()
-    print(f"Error: could not fetch .pdb or .cif for {id}. Skipping File")
+    print(f"Error: could not fetch .pdb or .cif for {rna_id}. Skipping File")
     return None, None
 
 
@@ -391,7 +380,6 @@ def search_rna_structures(save_path):
     print(f'Found {len(result_set)} structures matching criteria')
 
     # Create empty DataFrame to store the results
-    columns = ['ID', 'resname', 'resid', 'x_1', 'y_1', 'z_1']
     dtypes = {
         'ID': 'str',
         'resname': 'str',

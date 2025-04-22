@@ -1,5 +1,4 @@
 import json
-import sys
 import warnings
 
 import pandas as pd
@@ -45,17 +44,10 @@ def process_rna3db(file_path):
     train_unique_sequences_set = set()
     sample_ct, file_ext = 0, 1
 
-    # debug_flag = False
     for component in train_set:
-        # if debug_flag:
-        #     break
         comp_sequences = train_set[component]
         for fam in tqdm(comp_sequences, desc=f"Processing 'train_set': Component {component.split('_')[-1]}"):
-            # if debug_flag:
-            #     break
             for seq in comp_sequences[fam]:
-                # if debug_flag:
-                #     break
                 entry = comp_sequences[fam][seq]
                 train_unique_sequences_set.add(entry['sequence'])  # Add the actual string
 
@@ -71,11 +63,12 @@ def process_rna3db(file_path):
                     res_dict = iterate_cif_file(lines=lines, entity_id=seq, ccd_dict=ccd_d)
                 elif ext_type == 'pdb':
                     res_dict = iterate_pdb_file(lines=lines, entity_id=seq, ccd_dict=ccd_d)
+                else:  # Continue to next sample if the file type is not recognized
+                    continue
 
                 df_confs = pd.DataFrame(columns=['ID', 'resname', 'resid', 'altloc', 'x_1', 'y_1', 'z_1'])
 
                 # Validate for all conformations from the pdb file if they match the expected sequence
-                val_ct = 0
                 for conf in res_dict:
                     df, val_seq = res_dict[conf]
                     if not df.empty and not df.isna().all().all():
@@ -87,14 +80,6 @@ def process_rna3db(file_path):
                         error_logs["train"]["seq_mismatch"]["id"].append(f"{seq}_{conf}")
                         error_logs["train"]["seq_mismatch"]["actual"].append(val_seq)
                         error_logs["train"]["seq_mismatch"]["expected"].append(entry['sequence'])
-
-                    #     if not df.empty:
-                    #         df_confs = pd.concat([df_confs, df], ignore_index=True)
-                    #         val_ct += 1
-
-                # if val_ct == 0:
-                #      print(f"Skipping Sequence due to sequence mismatch for {pdb_id}_{chain_id}: {val_ct}/{len(res_dict.keys())} found conformations match the expected sequence")
-                #     continue
 
                 # Add additional information to the DataFrame
                 df_confs['resolution'] = entry['resolution']
@@ -111,9 +96,6 @@ def process_rna3db(file_path):
                         df_train = pd.DataFrame(columns=cols)  # Reset the DataFrame
                         sample_ct = 0
                         file_ext += 1
-                    # Break for debugging:
-                    # if df_train.shape[0] > 1:
-                    #     debug_flag = True
 
     # Save the remaining DataFrame to a CSV file
     df_train.to_csv(f'../RNA3DB/rna3db_train_{file_ext}.csv', index=False)
@@ -121,18 +103,11 @@ def process_rna3db(file_path):
     # Collect unique nucleotide sequences while looping
     test_unique_sequences_set = set()
     sample_ct, file_ext = 0, 1
-    # debug_flag = False
 
     for component in test_set:
-        # if debug_flag:
-        #     break
         comp_sequences = test_set[component]
         for fam in tqdm(comp_sequences, desc=f"Processing 'test_set': Component {component.split('_')[-1]}"):
-            # if debug_flag:
-            #     break
             for seq in comp_sequences[fam]:
-                # if debug_flag:
-                #     break
                 entry = comp_sequences[fam][seq]
                 test_unique_sequences_set.add(entry['sequence'])
 
@@ -148,11 +123,12 @@ def process_rna3db(file_path):
                     res_dict = iterate_cif_file(lines=lines, entity_id=seq, ccd_dict=ccd_d)
                 elif ext == 'pdb':
                     res_dict = iterate_pdb_file(lines=lines, entity_id=seq, ccd_dict=ccd_d)
+                else:  # Continue to next sample if the file type is not recognized
+                    continue
 
                 df_confs = pd.DataFrame(columns=['ID', 'resname', 'resid', 'altloc', 'x_1', 'y_1', 'z_1'])
 
                 # Validate for all conformations from the pdb file if they match the expected sequence
-                val_ct = 0
                 for conf in res_dict:
                     df, val_seq = res_dict[conf]
                     if not df.empty and not df.isna().all().all():
@@ -164,14 +140,6 @@ def process_rna3db(file_path):
                         error_logs["test"]["seq_mismatch"]["id"].append(f"{seq}_{conf}")
                         error_logs["test"]["seq_mismatch"]["actual"].append(val_seq)
                         error_logs["test"]["seq_mismatch"]["expected"].append(entry['sequence'])
-
-                    # if val_seq == entry['sequence']:
-                    #     if not df.empty:
-                    #         df_confs = pd.concat([df_confs, df], ignore_index=True)
-                    #         val_ct += 1
-
-                # if val_ct == 0:
-                #     print(f"Skipping Sequence due to sequence mismatch for {pdb_id}_{chain_id}: {val_ct}/{len(res_dict.keys())} found conformations match the expected sequence")
 
                 # Add additional information to the DataFrame
                 df_confs['resolution'] = entry['resolution']
@@ -188,50 +156,12 @@ def process_rna3db(file_path):
                         df_test = pd.DataFrame(columns=cols)
                         sample_ct = 0
                         file_ext += 1
-                    # Break for debugging:
-                    # if df_test.shape[0] > 1:
-                    #     debug_flag = True
 
     df_test.to_csv(f'../RNA3DB/rna3db_test_{file_ext}.csv', index=False)
 
     # Save the error logs to a JSON file
     with open('../RNA3DB/error_logs.json', 'w') as error_file:
         json.dump(error_logs, error_file, indent=4)
-
-    '''
-        # Print Statistics
-        print("############## Statistics ##############")
-        print("-------------- TRAIN -----------------")
-        total_unique_samples = df_train['ID'].str.extract(r'^([a-zA-Z0-9]{4})')[0].nunique()
-        df_train['pdb_id'] = df_train['ID'].str.split('_').str[0]
-        lengths_by_pdb = df_train.groupby('pdb_id').size()
-    
-        # Compute stats
-        min_len = lengths_by_pdb.min()
-        max_len = lengths_by_pdb.max()
-        mean_len = lengths_by_pdb.mean()
-        std_len = lengths_by_pdb.std()
-    
-        print(f"Total unique PDBs: {total_unique_samples}")
-        print(f"Unique nucleotide sequences: {len(train_unique_sequences_set)}")
-        print(f"Sample length stats → Min: {min_len}, Max: {max_len}, Mean: {mean_len:.2f}, Std: {std_len:.2f}")
-    
-        print("-------------- TEST ------------------")
-        total_unique_samples = df_test['ID'].str.extract(r'^([a-zA-Z0-9]{4})')[0].nunique()
-        df_test['pdb_id'] = df_test['ID'].str.split('_').str[0]
-        lengths_by_pdb = df_test.groupby('pdb_id').size()
-    
-        # Compute stats
-        min_len = lengths_by_pdb.min()
-        max_len = lengths_by_pdb.max()
-        mean_len = lengths_by_pdb.mean()
-        std_len = lengths_by_pdb.std()
-    
-        print(f"Total unique PDBs: {total_unique_samples}")
-        print(f"Unique nucleotide sequences: {len(test_unique_sequences_set)}")
-        print(f"Sample length stats → Min: {min_len}, Max: {max_len}, Mean: {mean_len:.2f}, Std: {std_len:.2f}")
-    
-    '''
 
 
 process_rna3db('../RNA3DB/rna3db.json')
