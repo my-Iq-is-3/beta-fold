@@ -166,15 +166,17 @@ def process_rna3db(file_path):
 
 
 # process_rna3db('../RNA3DB/rna3db.json')
-
-id = '8why'
+'''
+id = '1ehz'
 chain_id = 'A'
 ext, lines = fetch_file(id)
 print(ext)
 ccd_dict = load_ccd_dict('../RNA3DB/components.cif')
 start_time = time.time()
-results_dict = iterate_cif_file(lines=lines, entity_id=f'{id}_{chain_id}', ccd_dict=ccd_dict)
+# results_dict = iterate_cif_file(lines=lines, entity_id=f'{id}_{chain_id}', ccd_dict=ccd_dict)
+results_dict = iterate_pdb_file(lines=lines, entity_id=f'{id}_{chain_id}', ccd_dict=ccd_dict)
 stop_time = time.time()
 # results_dict = iterate_pdb_file(lines=lines, entity_id=id, ccd_dict=ccd_dict)
 print(results_dict)
 print(f'Time taken: {stop_time - start_time} seconds')
+'''

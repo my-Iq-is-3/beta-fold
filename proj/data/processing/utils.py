@@ -278,10 +278,10 @@ def load_files_to_dataframe(directory, max_size_mb):
 
 def fetch_file(rna_id):
     base_url = 'https://files.rcsb.org/view'
-    for ext in ['cif', 'pdb']:
+    for ext in ['pdb', 'cif']:
         url = f'{base_url}/{rna_id}.{ext}'
         try:
-            response = requests.get(url, timeout=5)
+            response = requests.get(url, timeout=10)
             if response.ok:
                 return ext, response.text.splitlines()
         except requests.RequestException as e:
