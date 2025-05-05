@@ -1,7 +1,0 @@
-PY: # ,  
-Building python3 Interface (using makefile)
-<string>:1: DeprecationWarning: SO is deprecated, use EXT_SUFFIX
-1g++ -c  -o ../RNA_class/Dynalign_object.o    -DNDEBUG -std=c++11 -O3 -w -fPIC ../RNA_class/Dynalign_object.cpp
-/bin/bash: line 1: 1g++: command not found
-make[1]: *** [../compiler.h:260: ../RNA_class/Dynalign_object.o] Error 127
-make: *** [Makefile:342: python] Error 2
