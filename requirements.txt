@@ -16,7 +16,7 @@ wandb==0.12.0
 pynvml==11.0.0
 git+https://github.com/NVIDIA/dllogger#egg=dllogger
 einops
-bitsandbytes # Install without version first, may need pinning later if build fails
+bitsandbytes-cuda113==0.26.0.post2
 rna-fm # Assuming this is compatible
 networkx
 torchdata==0.4.0 # Use older version compatible with PyTorch ~1.10
