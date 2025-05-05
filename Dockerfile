@@ -53,7 +53,7 @@ WORKDIR /workspace/app # Changed name slightly for clarity
 
 # Copy requirements first (from the root context)
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade-strategy only-if-needed -r requirements.txt
 
 # --- THIS IS THE KEY CHANGE ---
 # Copy ONLY the contents of NEW-SE3Transformer from the (pruned) build context
