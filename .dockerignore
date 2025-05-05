@@ -1,0 +1,43 @@
+# Ignore Git directory and related files
+.git
+.gitignore
+
+# Ignore Python virtual environments and cache
+venv
+.venv
+__pycache__
+*.pyc
+*.pyo
+
+# Ignore common editor/IDE files
+.idea
+.vscode
+
+# Ignore build artifacts (if any)
+build/
+dist/
+*.egg-info/
+
+# Ignore specific project directories NOT needed in the image
+proj/
+RNAstructure/
+
+
+# Ignore specific project files NOT needed in the image
+LICENSE
+NOTICE
+README.md
+setup.py
+*.ipynb # Ignore notebooks if they aren't needed inside the final image
+
+# --- IMPORTANT ---
+# Now, explicitly UN-ignore the files/folders needed for the build
+
+# Allow the Dockerfile itself (doesn't really affect context, but good practice)
+!Dockerfile
+
+# Allow the requirements file needed by the Dockerfile
+!requirements.txt
+
+# Allow the directory containing the actual application code
+!NEW-SE3Transformer/
