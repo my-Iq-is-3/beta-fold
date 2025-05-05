@@ -1,14 +1,10 @@
 # Use wheel index specifically for PyTorch 1.9.0 / CUDA 11.3
 -f https://data.pyg.org/whl/torch-1.9.0+cu113.html
 
-# Pin PyG dependencies to known compatible versions for PT 1.9 / CUDA 11.3
-# (Check the URL above or PyG docs for exact compatible versions)
+# Pin PyG dependencies
 torch-scatter==2.0.9
 torch-sparse==0.6.12
 torch-cluster==1.5.9
-# torch-spline-conv==<version> # Add only if you specifically need it, find compatible version
-
-# Pin PyG itself to a version compatible with PT 1.9
 torch-geometric==2.0.4
 
 # Other dependencies
@@ -20,4 +16,4 @@ einops
 bitsandbytes-cuda113==0.26.0.post2
 rna-fm
 networkx
-torchdata==0.3.0 # Use even older version, compatible with PT 1.9
+# torchdata==0.3.0 # Use even older version, compatible with PT 1.9
