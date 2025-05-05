@@ -7,9 +7,6 @@ import matplotlib.pyplot as plt
 from einops import rearrange, repeat, reduce
 from einops.layers.torch import Rearrange
 
-import torch.utils.checkpoint as checkpoint
-
-
 from dropout import *
 
 def init_weights(m):
@@ -66,35 +63,13 @@ class ScaledDotProductAttention(nn.Module):
 
         #exit()
         if mask is not None:
-            #attn = attn.masked_fill(mask == 0, -1e9)
-            #attn = attn#*self.gamma
-            # print(attn.shape)
-            # print(mask.shape)
-            # exit()
-            # print(attn.shape)
-            # print(mask.shape)
-            # exit()
-            # print(attn.shape)
-            # print(mask.shape)
-            # exit()
-            
-            attn = attn+mask
-            # print(attn.shape)
-            # exit()
+
+            attn = attn+mask # this is actually the bias
+
 
 
         if attn_mask is not None:
-            # print(attn.shape)
-            # print(attn_mask.shape)
-            # attn = attn+attn_mask
-            #attn=attn.float().masked_fill(attn_mask == 0, float('-inf'))
-            #pass
-            for i in range(len(attn_mask)):
-                attn_mask[i,0]=attn_mask[i,0].fill_diagonal_(1)
-            # print(attn_mask.shape)
-            # exit()
-            #print(torch.diagonal(attn_mask).mean())
-            attn=attn.float().masked_fill(attn_mask == 0, float('-1e-9'))
+            attn=attn.float().masked_fill(attn_mask == -1, float('-1e-9'))
 
 
         attn = self.dropout(F.softmax(attn, dim=-1))
@@ -156,26 +131,9 @@ class MultiHeadAttention(nn.Module):
         # print(k.shape)
         # print(v.shape)
         if src_mask is not None:
-            src_mask=src_mask[:,:q.shape[2]].unsqueeze(-1).float()
-            # q=q+src_mask
-            # k=k+src_mask
-            # print(src_mask.shape)
-            # print(src_mask[0])
-            attn_mask=torch.matmul(src_mask,src_mask.permute(0,2,1))#.long()
-            #attn_mask=attn_mask.float().masked_fill(attn_mask == 0, float('-inf')).masked_fill(attn_mask == 1, float(0.0))
-            attn_mask=attn_mask.unsqueeze(1)
-            # print(attn_mask.shape)
-            # exit()
-            # print(src_mask.shape)
-            #to_plot=attn_mask[1].squeeze().detach().cpu().numpy()
-            #plt.imshow(to_plot)
-            #plt.show()
-            # exit()
-            # exit()
-            # src_mask
-            # src_mask
-            #print(q[0,0,:,0])
-        #exit()
+            src_mask[src_mask==0]=-1
+            src_mask=src_mask.unsqueeze(-1).float()
+            attn_mask=torch.matmul(src_mask,src_mask.permute(0,2,1)).unsqueeze(1)
             q, attn = self.attention(q, k, v, mask=mask,attn_mask=attn_mask)
         else:
             q, attn = self.attention(q, k, v, mask=mask)
@@ -248,16 +206,10 @@ class ConvTransformerEncoderLayer(nn.Module):
                                            nn.Linear(pairwise_dimension,pairwise_dimension*4),
                                            nn.ReLU(inplace=True),
                                            nn.Linear(pairwise_dimension*4,pairwise_dimension))
-        
-    def custom(self, module):
-        def custom_forward(*inputs):
-            inputs = module(*inputs)
-            return inputs
-        return custom_forward
 
-    def forward(self, src , pairwise_features, src_mask=None, return_aw=False, use_gradient_checkpoint=False):
-        
-        src = src*src_mask.float().unsqueeze(-1)
+
+    def forward(self, src , pairwise_features, src_mask=None, return_aw=False):
+        src = src*src_mask.float().unsqueeze(-1) # <--
 
         res = src
         # print(self.norm3(self.conv(src.permute(0,2,1)).permute(0,2,1)).shape)
@@ -280,28 +232,13 @@ class ConvTransformerEncoderLayer(nn.Module):
 
         # print(src.shape)
         # exit()
-        # print(src_mask)
-        # exit()
-        if use_gradient_checkpoint:
-            pairwise_features=pairwise_features+checkpoint.checkpoint(self.custom(self.outer_product_mean), src)
-            pairwise_features=pairwise_features+self.pair_dropout_out(
-                checkpoint.checkpoint(self.custom(self.triangle_update_out), pairwise_features, src_mask))
-            pairwise_features=pairwise_features+self.pair_dropout_in(
-                checkpoint.checkpoint(self.custom(self.triangle_update_in), pairwise_features, src_mask))
-            # pairwise_features=pairwise_features+self.pair_dropout_out(self.triangle_update_out(pairwise_features,src_mask))
-            # pairwise_features=pairwise_features+self.pair_dropout_in(self.triangle_update_in(pairwise_features,src_mask))
-        else:
-            pairwise_features=pairwise_features+self.outer_product_mean(src)
-            pairwise_features=pairwise_features+self.pair_dropout_out(self.triangle_update_out(pairwise_features,src_mask))
-            pairwise_features=pairwise_features+self.pair_dropout_in(self.triangle_update_in(pairwise_features,src_mask))
+        pairwise_features=pairwise_features+self.outer_product_mean(src)
+        pairwise_features=pairwise_features+self.pair_dropout_out(self.triangle_update_out(pairwise_features,src_mask))
+        pairwise_features=pairwise_features+self.pair_dropout_in(self.triangle_update_in(pairwise_features,src_mask))
         if self.use_triangular_attention:
             pairwise_features=pairwise_features+self.pair_attention_dropout_out(self.triangle_attention_out(pairwise_features,src_mask))
             pairwise_features=pairwise_features+self.pair_attention_dropout_in(self.triangle_attention_in(pairwise_features,src_mask))
-
-        if use_gradient_checkpoint:
-            pairwise_features=pairwise_features+checkpoint.checkpoint(self.custom(self.pair_transition),pairwise_features)
-        else:
-            pairwise_features=pairwise_features+self.pair_transition(pairwise_features)
+        pairwise_features=pairwise_features+self.pair_transition(pairwise_features)
         if return_aw:
             return src,pairwise_features,attention_weights
         else:
@@ -405,7 +342,7 @@ class TriangleMultiplicativeModule(nn.Module):
         self.to_out_norm = nn.LayerNorm(hidden_dim)
         self.to_out = nn.Linear(hidden_dim, dim)
 
-    def forward(self, x, src_mask):
+    def forward(self, x, src_mask = None):
         src_mask=src_mask.unsqueeze(-1).float()
         mask = torch.matmul(src_mask,src_mask.permute(0,2,1))
         assert x.shape[1] == x.shape[2], 'feature map must be symmetrical'
@@ -443,12 +380,12 @@ class RibonanzaNet(nn.Module):
         super(RibonanzaNet, self).__init__()
         self.config=config
         nhid=config.ninp*4
-
+        self.use_gradient_checkpoint = False
         self.transformer_encoder = []
         print(f"constructing {config.nlayers} ConvTransformerEncoderLayers")
         for i in range(config.nlayers):
             if i!= config.nlayers-1:
-                k=5
+                k=config.k
             else:
                 k=1
             #print(k)
@@ -468,14 +405,6 @@ class RibonanzaNet(nn.Module):
         self.outer_product_mean=Outer_Product_Mean(in_dim=config.ninp,pairwise_dim=config.pairwise_dimension)
         self.pos_encoder=relpos(config.pairwise_dimension)
 
-        self.use_gradient_checkpoint=config.use_grad_checkpoint
-
-    def custom(self, module):
-        def custom_forward(*inputs):
-            inputs = module(inputs[0])
-            return inputs
-        return custom_forward
-
     def forward(self, src,src_mask=None,return_aw=False):
         B,L=src.shape
         src = src
@@ -485,25 +414,26 @@ class RibonanzaNet(nn.Module):
         # outer_product = torch.einsum('bid,bjc -> bijcd', src, src)
         # outer_product = rearrange(outer_product, 'b i j c d -> b i j (c d)')
         # print(outer_product.shape)
-        if self.use_gradient_checkpoint:
-            pairwise_features=checkpoint.checkpoint(self.custom(self.outer_product_mean), src)
-            pairwise_features=pairwise_features+self.pos_encoder(src)
-        else:
-            pairwise_features=self.outer_product_mean(src)
-            pairwise_features=pairwise_features+self.pos_encoder(src)
+        pairwise_features=self.outer_product_mean(src)
+        pairwise_features=pairwise_features+self.pos_encoder(src)
         # print(pairwise_features.shape)
         # exit()
 
         attention_weights=[]
         for i,layer in enumerate(self.transformer_encoder):
-   
+            if src_mask is not None:
                 #src_key_padding_mask
-            # if return_aw:
-            #     src,aw=layer(src, pairwise_features, src_mask,return_aw=return_aw, )
-            #     attention_weights.append(aw)
-            # else:
-            src,pairwise_features=layer(src, pairwise_features, src_mask,return_aw=return_aw,use_gradient_checkpoint=self.use_gradient_checkpoint)
-
+                if return_aw:
+                    src,aw=layer(src, pairwise_features, src_mask,return_aw=return_aw)
+                    attention_weights.append(aw)
+                else:
+                    src,pairwise_features=layer(src, pairwise_features, src_mask,return_aw=return_aw)
+            else:
+                if return_aw:
+                    src,aw=layer(src, pairwise_features, return_aw=return_aw)
+                    attention_weights.append(aw)
+                else:
+                    src,pairwise_features=layer(src, pairwise_features, return_aw=return_aw)
             #print(src.shape)
         output = self.decoder(src).squeeze(-1)+pairwise_features.mean()*0
 
@@ -512,7 +442,7 @@ class RibonanzaNet(nn.Module):
             return output, attention_weights
         else:
             return output
-        
+
     def get_embeddings(self, src,src_mask=None,return_aw=False):
         B,L=src.shape
         src = src
@@ -547,13 +477,13 @@ class RibonanzaNet(nn.Module):
             #         attention_weights.append(aw)
             #     else:
             #         src,pairwise_features=layer(src, pairwise_features, return_aw=return_aw)
-            src,pairwise_features=layer(src, pairwise_features, src_mask,return_aw=return_aw,use_gradient_checkpoint=self.use_gradient_checkpoint)
+            src,pairwise_features=layer(src, pairwise_features, src_mask,return_aw=return_aw)
             #print(src.shape)
         #output = self.decoder(src).squeeze(-1)+pairwise_features.mean()*0
 
 
         return src, pairwise_features
-    
+
 class TriangleAttention(nn.Module):
     def __init__(self, in_dim=128, dim=32, n_heads=4, wise='row'):
         super(TriangleAttention, self).__init__()
@@ -627,23 +557,12 @@ class TriangleAttention(nn.Module):
 
 
 if __name__ == "__main__":
-    import yaml
-    class Config:
-        def __init__(self, **entries):
-            self.__dict__.update(entries)
-            self.entries=entries
-
-        def print(self):
-            print(self.entries)
-
-    def load_config_from_yaml(file_path):
-        with open(file_path, 'r') as file:
-            config = yaml.safe_load(file)
-        return Config(**config)
+    from Functions import *
     config = load_config_from_yaml("configs/pairwise.yaml")
     model=RibonanzaNet(config).cuda()
     x=torch.ones(4,128).long().cuda()
     mask=torch.ones(4,128).long().cuda()
+    mask[:,120:]=0
     print(model(x,src_mask=mask).shape)
 
     # tri_attention=TriangleAttention(wise='row')
