@@ -40,7 +40,7 @@ RUN sed -i 's/"35 50 60 70"/"60 70 80"/g' cmake/modules/CUDA.cmake
 
 # Configure and build DGL with CUDA and FP16 support
 WORKDIR /dgl_source/build
-RUN cmake -DUSE_CUDA=ON -DUSE_FP16=ON ..
+RUN cmake -DUSE_CUDA=ON -DUSE_FP16=ON /dgl_source
 RUN make -j$(nproc) # Use all available cores for faster build
 
 # --- Install the built DGL into this stage's /usr/local ---
@@ -49,7 +49,7 @@ RUN make install
 # -------------------- Stage 2: Final image --------------------
 FROM ${FROM_IMAGE_NAME}
 
-LABEL maintainer="Zach C <your_email@example.com>"
+LABEL maintainer="Zach C <your_email@example.com>" 
 LABEL description="SE3 Transformer environment with custom-built DGL (v0.7.0) for CUDA 11.3"
 
 ENV DEBIAN_FRONTEND=noninteractive
