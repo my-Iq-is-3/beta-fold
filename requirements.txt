@@ -17,3 +17,5 @@ einops
 bitsandbytes-cuda113==0.26.0.post2
 rna-fm
 networkx
+--find-links https://data.dgl.ai/wheels/repo.html
+dgl-cu113==0.8.0
