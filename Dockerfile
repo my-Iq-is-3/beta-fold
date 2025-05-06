@@ -49,7 +49,7 @@ RUN make install
 # -------------------- Stage 2: Final image --------------------
 FROM ${FROM_IMAGE_NAME}
 
-LABEL maintainer="Zach C <your_email@example.com>" # Updated maintainer
+LABEL maintainer="Zach C <your_email@example.com>"
 LABEL description="SE3 Transformer environment with custom-built DGL (v0.7.0) for CUDA 11.3"
 
 ENV DEBIAN_FRONTEND=noninteractive
